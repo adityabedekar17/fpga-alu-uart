@@ -1,5 +1,4 @@
 
-# Blinky SystemVerilog Template
 
 Implementation of UART ALU on an FPGA
 ## Dependencies
