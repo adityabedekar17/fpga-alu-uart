@@ -1,8 +1,4 @@
-
-dv/dv_pkg.sv
-
-dv/blinky_tb.sv
-
+dv/uart_echo_tb.sv
 --timing
 -j 0
 -Wall
@@ -10,11 +6,9 @@ dv/blinky_tb.sv
 --trace-fst
 --trace-structs
 --main-top-name "-"
-
 // Run with +verilator+rand+reset+2
 --x-assign unique
 --x-initial unique
-
 -Werror-IMPLICIT
 -Werror-USERERROR
 -Werror-LATCH
