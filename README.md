@@ -1,8 +1,7 @@
 
 # Blinky SystemVerilog Template
 
-This project demonstrates a scalable SystemVerilog project template. It implements an overengineered "blinky" example working on multiple synthesis and simulation targets.
-
+Implementation of UART ALU on an FPGA
 ## Dependencies
 
 * <https://github.com/YosysHQ/oss-cad-suite-build/releases>
