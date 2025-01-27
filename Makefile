@@ -22,7 +22,7 @@ lint:
 #	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
 #	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
 sim:
-	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
+	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal -DNO_ICE40_DEFAULT_ASSIGNMENTS --top ${TOP}
 	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
 		
 synth/build/rtl.sv2v.v: ${RTL} rtl/rtl.f

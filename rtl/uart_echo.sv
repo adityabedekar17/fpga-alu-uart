@@ -9,7 +9,7 @@ module uart_echo
     input  logic clk_i,
     input  logic rst_ni,
     output logic rx_i,
-    output logic rx_o
+    output logic tx_o
 );
 
     logic tx_data;
@@ -28,9 +28,9 @@ module uart_echo
         .s_axis_tdata(tx_data),
         .s_axis_tvalid(tx_valid),
         .s_axis_tready(tx_ready),
-        .txd(),
+        .txd(tx_o),
         .busy(),
-        .prescale()
+        .prescale(8'd16)
     );
 
     uart_rx #(
@@ -41,11 +41,14 @@ module uart_echo
         .m_axis_tdata(rx_data),
         .m_axis_tvalid(rx_valid),
         .m_axis_tready(rx_ready),
-        .rxd(),
+        .rxd(rx_i),
         .busy(),
         .overrun_error(),
         .frame_error(),
-        .prescale()
+        .prescale(8'd16)
     );
+    assign tx_data = rx_data;
+    assign tx_valid = rx_valid;
+    assign rx_ready = tx_ready;
 
 endmodule

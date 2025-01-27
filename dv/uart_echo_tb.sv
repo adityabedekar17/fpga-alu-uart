@@ -1,74 +1,76 @@
-`timescale 1ns/1ps
-module uart_echo_tb
- #( parameter DATA_WIDTH = 8,
-   /*prescale = clk frequency /(baud rate*8)-1;*/
-   /* from Sifferman/Piazza*/
-    parameter int BAUD_RATE = 115200,
-    parameter [15:0] PRESCALE = 16,
-    parameter CLK_FREQ = 8.0 * PRESCALE * BAUD_RATE,
-    parameter CLK_PERIOD = (1.0/CLK_FREQ)
- );
-   //https://support.sbg-systems.com/sc/kb/latest/technology-insights/uart-baud-rate-and-output-rate
- /*
-    Baud rate =  number of bytes * total bits per frame * output rate of message in Hz
-    total bits per frame = data bits + start bit + stop bit + parity ( optional)
-    8 bits of data + 1start + 1stop = 10 bits per frame
-    in our case: 
-    total bits per frame - 10  
-    output rate of message in Hz - ? TBD
-    number of bytes - ? TBD
-    */
-    
+`timescale 1ns / 1ps
 
-    reg clk = 0;
-    reg rst = 1;
-    reg rxd = 1;
-    wire txd;
-
-    reg[7:0] test_data = 8'hC4;
-
-    uart_echo  dut(
-        .clk_i(clk),
-        .rst_i(rst),
-        .prescale_i(PRESCALE),
-        .rxd_i(rxd),
-        .txd_o(txd)
-    );
-    always #(CLK_PERIOD*1s/2) clk = ~clk;
+module uart_echo_tb;
+    logic clk_i;
+    logic rst_ni;
+    logic rx_i;
+    logic tx_o;
 
     initial begin
-        $dumpfile("uart_echo.vcd");
-        $dumpvars(0,uart_echo_tb);
+        clk_i = 0;
+        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
+    end
 
-        #100 rst=0;
-        #100;
-        // begin sending
-        rxd=0;//start bit
-        #(8.68us);
+    // waveform fst file
+    initial begin
+        $dumpfile("dump.fst");
+        $dumpvars(0, tb);
+    end
 
-        rxd = test_data[0]; #(8.68us); //1bit wait time
-        rxd = test_data[1]; #(8.68us);
-        rxd = test_data[2]; #(8.68us);
-        rxd = test_data[3]; #(8.68us);
-        rxd = test_data[4]; #(8.68us);
-        rxd = test_data[5]; #(8.68us);
-        rxd = test_data[6]; #(8.68us);
-        rxd = test_data[7]; #(8.68us);
-        
-        rxd =1; //stop
-        #(8.68us);
+    top dut (.*);
 
-        #(100us);
+    initial begin
+        rx_i   = 1;
+        rst_ni = 0;
+
+        repeat (100) @(posedge clk_i);
+        rst_ni = 1;
+
+        repeat (1000) @(posedge clk_i);
+
+        // send 'A' (0x41)
+        $display("Sending A...");
+        send_byte(8'h41);
+
+        repeat (50000) @(posedge clk_i);
+        $display("Done!");
         $finish;
     end
 
+    task send_byte(input logic [7:0] data);
+        integer i;
 
+        rx_i = 0;
+        repeat (280) @(posedge clk_i);
 
-initial begin
-     $display("Simulation parameters:");
-    $display("Clock frequency: %0f Hz", CLK_FREQ);
-    $display("Clock period: %0f s", CLK_PERIOD);
-    $display("Baud rate: %0d bps", BAUD_RATE);
-    $display("Prescale value: %0d", PRESCALE);
-    end  
+        for (i = 0; i < 8; i++) begin
+            rx_i = data[i];
+            repeat (280) @(posedge clk_i);
+        end
+
+        rx_i = 1;
+        repeat (280) @(posedge clk_i);
+    endtask
+
+    logic [7:0] tx_byte;
+    integer tx_bit_count = 0;
+
+    always @(negedge tx_o) begin
+        if (tx_bit_count == 0) begin
+            tx_bit_count <= 1;
+        end else if (tx_bit_count <= 8) begin
+            tx_byte[tx_bit_count-1] <= tx_o;
+            tx_bit_count <= tx_bit_count + 1;
+        end else begin
+            $display("TX byte received: %h", tx_byte);
+            tx_bit_count <= 0;
+        end
+    end
+
+    always @(posedge clk_i) begin
+        if (dut.axis_valid && dut.axis_ready) begin
+            $display("Echoed byte: %h", dut.axis_data);
+        end
+    end
 endmodule
+
