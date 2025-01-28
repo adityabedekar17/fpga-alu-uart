@@ -1,16 +1,17 @@
+
 TOP := uart_echo_tb
 
 export BASEJUMP_STL_DIR := $(abspath third_party/basejump_stl)
 export YOSYS_DATDIR := $(shell yosys-config --datdir)
 
 RTL := $(shell \
-	BASEJUMP_STL_DIR=$(BASEJUMP_STL_DIR) \
-	python3 misc/convert_filelist.py Makefile rtl/rtl.f \
+ BASEJUMP_STL_DIR=$(BASEJUMP_STL_DIR) \
+ python3 misc/convert_filelist.py Makefile rtl/rtl.f \
 )
 
 SV2V_ARGS := $(shell \
-	BASEJUMP_STL_DIR=$(BASEJUMP_STL_DIR) \
-	python3 misc/convert_filelist.py sv2v rtl/rtl.f \
+ BASEJUMP_STL_DIR=$(BASEJUMP_STL_DIR) \
+ python3 misc/convert_filelist.py sv2v rtl/rtl.f \
 )
 
 .PHONY: lint sim gls icestorm_icebreaker_gls icestorm_icebreaker_program icestorm_icebreaker_flash clean
@@ -18,36 +19,31 @@ SV2V_ARGS := $(shell \
 lint:
 	verilator lint/verilator.vlt -f rtl/rtl.f -f dv/dv.f --lint-only --top top
 
-#sim:
-#	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
-#	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
 sim:
-	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal -DNO_ICE40_DEFAULT_ASSIGNMENTS --top ${TOP}
+	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f rtl/rtl.f -f dv/pre_synth.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
 	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
-		
+
 synth/build/rtl.sv2v.v: ${RTL} rtl/rtl.f
 	mkdir -p $(dir $@)
 	sv2v ${SV2V_ARGS} -w $@ -DSYNTHESIS
-synth/icestorm_icebreaker/build:
-	mkdir -p synth/icestorm_icebreaker/build	
 
-gls: synth/icestorm_icebreaker/build/synth.v
-	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f synth/icestorm_icebreaker/gls.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
+gls: synth/yosys_generic/build/synth.v
+	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f synth/yosys_generic/gls.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
 	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
 
-synth/yosys_generic/build/synth.v: synth/build/rtl.sv2v.v synth/icestorm_icebreaker/yosys.tcl
+synth/yosys_generic/build/synth.v: synth/build/rtl.sv2v.v synth/yosys_generic/yosys.tcl
 	mkdir -p $(dir $@)
-	yosys -p 'tcl synth/icestorm_icebreaker/yosys.tcl synth/build/rtl.sv2v.v' -l synth/icestorm_icebreaker/build/yosys.log
+	yosys -p 'tcl synth/yosys_generic/yosys.tcl synth/build/rtl.sv2v.v' -l synth/yosys_generic/build/yosys.log
 
-#icestorm_icebreaker_gls: synth/icestorm_icebreaker/build/synth.v
-#	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f synth/icestorm_icebreaker/gls.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
-#	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
+icestorm_icebreaker_gls: synth/icestorm_icebreaker/build/synth.v
+	verilator lint/verilator.vlt --Mdir ${TOP}_$@_dir -f synth/icestorm_icebreaker/gls.f -f dv/dv.f --binary -Wno-fatal --top ${TOP}
+	./${TOP}_$@_dir/V${TOP} +verilator+rand+reset+2
 
 synth/icestorm_icebreaker/build/synth.v synth/icestorm_icebreaker/build/synth.json: synth/build/rtl.sv2v.v synth/icestorm_icebreaker/icebreaker.v synth/icestorm_icebreaker/yosys.tcl
 	mkdir -p $(dir $@)
 	yosys -p 'tcl synth/icestorm_icebreaker/yosys.tcl' -l synth/icestorm_icebreaker/build/yosys.log
 
-synth/icestorm_icebreaker/build/icebreaker.asc: synth/icestorm_icebreaker/build/synth.json 
+synth/icestorm_icebreaker/build/icebreaker.asc: synth/icestorm_icebreaker/build/synth.json synth/icestorm_icebreaker/nextpnr.py synth/icestorm_icebreaker/netpnr.pcf
 	nextpnr-ice40 \
 	 --json synth/icestorm_icebreaker/build/synth.json \
 	 --up5k \
@@ -56,8 +52,9 @@ synth/icestorm_icebreaker/build/icebreaker.asc: synth/icestorm_icebreaker/build/
 	 --pcf synth/icestorm_icebreaker/netpnr.pcf \
 	 --asc $@
 
-synth/icestorm_icebreaker/build/icebreaker.bit: synth/icestorm_icebreaker/build/icebreaker.asc
+%.bit: %.asc
 	icepack $< $@
+
 icestorm_icebreaker_program: synth/icestorm_icebreaker/build/icebreaker.bit
 	sudo $(shell which openFPGALoader) -b ice40_generic $<
 
@@ -74,21 +71,12 @@ synth/vivado_basys3/build/basys3/basys3.runs/impl_1/basys3.bit: synth/build/rtl.
 vivado_basys3_program: synth/vivado_basys3/build/basys3/basys3.runs/impl_1/basys3.bit
 	sudo $(shell which openFPGALoader) -b vivado_basys3 $<
 
-#clean:
-#	rm -rf *.memh *.memb 
-#	rm -rf *sim_dir *gls_dir 
-#   rm -rf dump.vcd dump.fst 
-#	rm -rf synth/build 
-#	rm -rf synth/icestorm_icebreaker/build
-#	rm -rf synth/icestorm_icebreaker/build 
-#	rm -rf synth/vivado_basys3/build
-
 clean:
 	rm -rf \
-	*.memh *.memb \
-	*sim_dir *gls_dir \
-	dump.vcd dump.fst \
-	synth/build \
-	synth/icestorm_icebreaker/build \
-	synth/icestorm_icebreaker/build \
-	synth/vivado_basys3/build
+	 *.memh *.memb \
+	 *sim_dir *gls_dir \
+	 dump.vcd dump.fst \
+	 synth/build \
+	 synth/yosys_generic/build \
+	 synth/icestorm_icebreaker/build \
+	 synth/vivado_basys3/build

@@ -1,12 +1,16 @@
 
 module blinky_sim (
+    
     input  logic clk_i,
     input  logic rst_ni,
-    output logic led_o
+    input logic rx_i,
+    output logic tx_o
 );
 
-blinky #(
-    .ResetValue(100)
-) blinky (.*);
+  
+uart_echo #(
+    .DATA_WIDTH(8)
+)  dut (.*);
 
 endmodule
+

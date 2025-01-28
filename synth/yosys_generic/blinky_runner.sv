@@ -1,37 +1,85 @@
+`timescale 1ns / 1ps
 
-module blinky_runner;
+module uart_echo_tb;
+    logic clk_i;
+    logic rst_ni;
+    logic rx_i;
+    logic tx_o;
 
-logic clk_i;
-logic rst_ni;
-logic led_o;
-
-localparam realtime ClockPeriod = 5ms;
-
-initial begin
-    clk_i = 0;
-    forever begin
-        #(ClockPeriod/2);
-        clk_i = !clk_i;
+    initial begin
+        clk_i = 0;
+        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
     end
-end
 
-blinky_sim blinky_sim (.*);
+    // waveform fst file
+    initial begin
+        $dumpfile("dump.fst");
+        $dumpvars(0, uart_echo_tb);
+        $dumpvars(1, dut);
+    end
 
-always @(posedge led_o) $info("Led on");
-always @(negedge led_o) $info("Led off");
+    blinky_sim dut (.*);
 
-task automatic reset;
-    rst_ni <= 0;
-    @(posedge clk_i);
-    rst_ni <= 1;
-endtask
 
-task automatic wait_for_on;
-    while (!led_o) @(posedge led_o);
-endtask
+    initial begin
+        rx_i   = 1;
+        rst_ni = 0;
 
-task automatic wait_for_off;
-    while (led_o) @(negedge led_o);
-endtask
+        repeat (100) @(posedge clk_i);
+        rst_ni = 1;
 
+        repeat (1000) @(posedge clk_i);
+
+        // send 'A' (0x41)
+        $display("Sending A...");
+        send_byte(8'h41);
+
+        repeat (80000) @(posedge clk_i);
+        $display("Done");
+        $finish;
+    end
+
+    task send_byte(input logic [7:0] data);
+        integer i;
+
+        rx_i = 0;
+        repeat (280) @(posedge clk_i);
+
+        for (i = 0; i <8; i++) begin
+            rx_i = data[i];
+            repeat (280) @(posedge clk_i);
+        end
+
+        rx_i = 1;
+        repeat (280) @(posedge clk_i);
+    endtask
+
+    logic [7:0] tx_byte, tx_data;
+    integer tx_bit_count = 0;
+    logic tx_valid, tx_ready;
+     always @(negedge tx_o) begin
+        if (tx_bit_count == 0 && tx_o == 0) begin
+            tx_bit_count <= 1;
+        end else if (tx_bit_count <= 8) begin
+            tx_byte[tx_bit_count-1] <= tx_o;
+            tx_bit_count <= tx_bit_count + 1;
+        end else if (tx_o ==1) begin
+            $display("TX byte received: %h", tx_byte);
+            tx_bit_count <= 0;
+        end
+    end
+
+    always @(posedge clk_i) begin
+        if (tx_valid && tx_ready) begin
+            $display("Echoed byte: %h", tx_data);
+        end
+    end
 endmodule
+
+
+
+
+
+
+
+

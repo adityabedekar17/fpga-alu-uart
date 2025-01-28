@@ -54,9 +54,9 @@ module uart_echo_tb;
         repeat (280) @(posedge clk_i);
     endtask
 
-    logic [7:0] tx_byte;
+    logic [7:0] tx_byte, tx_data;
     integer tx_bit_count = 0;
-     
+    logic tx_valid, tx_ready;
      always @(negedge tx_o) begin
         if (tx_bit_count == 0 && tx_o == 0) begin
             tx_bit_count <= 1;
@@ -70,8 +70,8 @@ module uart_echo_tb;
     end
 
     always @(posedge clk_i) begin
-        if (dut.tx_valid && dut.tx_ready) begin
-            $display("Echoed byte: %h", dut.tx_data);
+        if (tx_valid && tx_ready) begin
+            $display("Echoed byte: %h", tx_data);
         end
     end
 endmodule
