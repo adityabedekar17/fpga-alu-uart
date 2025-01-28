@@ -1,44 +1,29 @@
 `timescale 1ns / 1ps
 
 module uart_echo_tb;
-    logic clk_i;
-    logic rst_ni;
-    logic rx_i;
-    logic tx_o;
-
-    initial begin
-        clk_i = 0;
-        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
-    end
-
     // waveform fst file
     initial begin
         $dumpfile("dump.fst");
-        $dumpvars(0, uart_echo_tb);
-        $dumpvars(1, dut);
+        $dumpvars(0, uart_runner);
     end
 
-    uart_echo dut (.*);
-
+    uart_runner uart_runner (); 
 
     initial begin
-        rx_i   = 1;
-        rst_ni = 0;
+        uart_runner.reset();
 
-        repeat (100) @(posedge clk_i);
-        rst_ni = 1;
-
-        repeat (1000) @(posedge clk_i);
+        uart_runner.wait_clk(1000);
 
         // send 'A' (0x41)
         $display("Sending A...");
-        send_byte(8'h41);
+        uart_runner.send_byte(8'h41);
 
-        repeat (80000) @(posedge clk_i);
+        uart_runner.wait_clk(80000);
         $display("Done");
         $finish;
     end
 
+    /*
     task send_byte(input logic [7:0] data);
         integer i;
 
@@ -53,7 +38,9 @@ module uart_echo_tb;
         rx_i = 1;
         repeat (280) @(posedge clk_i);
     endtask
+    */
 
+   /*
     logic [7:0] tx_byte, tx_data;
     integer tx_bit_count = 0;
     logic tx_valid, tx_ready;
@@ -74,6 +61,7 @@ module uart_echo_tb;
             $display("Echoed byte: %h", tx_data);
         end
     end
+    */
 endmodule
 
 

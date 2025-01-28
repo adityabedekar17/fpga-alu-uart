@@ -1,0 +1,285 @@
+diff --git a/dv/dv.f b/dv/dv.f
+index 2d4142a..caef60a 100644
+--- a/dv/dv.f
++++ b/dv/dv.f
+@@ -1,3 +1,4 @@
++dv/dv_pkg.sv
+ dv/uart_echo_tb.sv
+ --timing
+ -j 0
+diff --git a/dv/pre_synth.f b/dv/pre_synth.f
+index d7c7028..1390a94 100644
+--- a/dv/pre_synth.f
++++ b/dv/pre_synth.f
+@@ -1,3 +1 @@
+-synth/icestorm_icebreaker/build/synth.v
+-///home/ad17/293/oss-cad-suite/share/yosys/ice40/cells_sim.v
+--v ${YOSYS_DATDIR}/ice40/cells_sim.v
+\ No newline at end of file
++dv/uart_runner.sv
+diff --git a/dv/uart_echo_tb.sv b/dv/uart_echo_tb.sv
+index c14a7c1..e2da0c7 100644
+--- a/dv/uart_echo_tb.sv
++++ b/dv/uart_echo_tb.sv
+@@ -1,44 +1,29 @@
+ `timescale 1ns / 1ps
+ 
+ module uart_echo_tb;
+-    logic clk_i;
+-    logic rst_ni;
+-    logic rx_i;
+-    logic tx_o;
+-
+-    initial begin
+-        clk_i = 0;
+-        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
+-    end
+-
+     // waveform fst file
+     initial begin
+         $dumpfile("dump.fst");
+-        $dumpvars(0, uart_echo_tb);
+-        $dumpvars(1, dut);
++        $dumpvars(0, uart_runner);
+     end
+ 
+-    uart_echo dut (.*);
+-
++    uart_runner uart_runner (); 
+ 
+     initial begin
+-        rx_i   = 1;
+-        rst_ni = 0;
+-
+-        repeat (100) @(posedge clk_i);
+-        rst_ni = 1;
++        uart_runner.reset();
+ 
+-        repeat (1000) @(posedge clk_i);
++        uart_runner.wait_clk(1000);
+ 
+         // send 'A' (0x41)
+         $display("Sending A...");
+-        send_byte(8'h41);
++        uart_runner.send_byte(8'h41);
+ 
+-        repeat (80000) @(posedge clk_i);
++        uart_runner.wait_clk(80000);
+         $display("Done");
+         $finish;
+     end
+ 
++    /*
+     task send_byte(input logic [7:0] data);
+         integer i;
+ 
+@@ -53,7 +38,9 @@ module uart_echo_tb;
+         rx_i = 1;
+         repeat (280) @(posedge clk_i);
+     endtask
++    */
+ 
++   /*
+     logic [7:0] tx_byte, tx_data;
+     integer tx_bit_count = 0;
+     logic tx_valid, tx_ready;
+@@ -74,6 +61,7 @@ module uart_echo_tb;
+             $display("Echoed byte: %h", tx_data);
+         end
+     end
++    */
+ endmodule
+ 
+ 
+diff --git a/dv/uart_runner.sv b/dv/uart_runner.sv
+new file mode 100644
+index 0000000..86fa2db
+--- /dev/null
++++ b/dv/uart_runner.sv
+@@ -0,0 +1,51 @@
++`timescale 1ns / 1ps
++
++module uart_runner;
++    logic clk_i;
++    logic rst_ni;
++    logic rx_i;
++    logic tx_o;
++
++    initial begin
++        clk_i = 0;
++        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
++    end
++
++    uart_echo #(
++      .DATA_WIDTH(8)
++    ) dut (.*);
++
++    task automatic reset;
++        rx_i = 1;
++        rst_ni = 0;
++        @(posedge clk_i);
++        rst_ni = 1;
++    endtask
++
++    task automatic send_byte(input logic [7:0] data);
++        integer i;
++
++        rx_i = 0;
++        repeat (280) @(posedge clk_i);
++
++        for (i = 0; i <8; i++) begin
++            rx_i = data[i];
++            repeat (280) @(posedge clk_i);
++        end
++
++        rx_i = 1;
++        repeat (280) @(posedge clk_i);
++    endtask
++
++    task automatic wait_clk(input int units);
++        repeat (units) @(posedge clk_i);
++    endtask
++endmodule
++
++
++
++
++
++
++
++
+diff --git a/rtl/config_pkg.sv b/rtl/config_pkg.sv
+index 0a5c25e..30fde54 100644
+--- a/rtl/config_pkg.sv
++++ b/rtl/config_pkg.sv
+@@ -1,4 +1,5 @@
+ 
++`timescale 1ns / 1ps
+ package config_pkg;
+ 
+ // define structs and enums needed for design
+diff --git a/rtl/rtl.f b/rtl/rtl.f
+index 964769e..3b49693 100644
+--- a/rtl/rtl.f
++++ b/rtl/rtl.f
+@@ -1,4 +1,3 @@
+--I${PWD}/third_party/alexforencich_uart/rtl
+ ${PWD}/third_party/alexforencich_uart/rtl/uart_rx.v
+ ${PWD}/third_party/alexforencich_uart/rtl/uart_tx.v
+ rtl/config_pkg.sv
+diff --git a/synth/icestorm_icebreaker/gls.f b/synth/icestorm_icebreaker/gls.f
+index 43cc9ef..e1fcb2c 100644
+--- a/synth/icestorm_icebreaker/gls.f
++++ b/synth/icestorm_icebreaker/gls.f
+@@ -1,4 +1,3 @@
+-rtl/top.sv
+ rtl/config_pkg.sv
+ -DNO_ICE40_DEFAULT_ASSIGNMENTS
+ ${YOSYS_DATDIR}/ice40/cells_sim.v
+diff --git a/synth/yosys_generic/blinky_runner.sv b/synth/icestorm_icebreaker/icerbeaker_runner.sv
+similarity index 98%
+rename from synth/yosys_generic/blinky_runner.sv
+rename to synth/icestorm_icebreaker/icerbeaker_runner.sv
+index d44588b..7ae5151 100644
+--- a/synth/yosys_generic/blinky_runner.sv
++++ b/synth/icestorm_icebreaker/icerbeaker_runner.sv
+@@ -1,6 +1,6 @@
+ `timescale 1ns / 1ps
+ 
+-module uart_echo_tb;
++module blinky_runner;
+     logic clk_i;
+     logic rst_ni;
+     logic rx_i;
+diff --git a/synth/yosys_generic/gls.f b/synth/yosys_generic/gls.f
+index 6fbd8d1..63b6012 100644
+--- a/synth/yosys_generic/gls.f
++++ b/synth/yosys_generic/gls.f
+@@ -4,4 +4,4 @@ rtl/config_pkg.sv
+ ${YOSYS_DATDIR}/simlib.v
+ 
+ synth/yosys_generic/build/synth.v
+-synth/yosys_generic/blinky_runner.sv
++synth/yosys_generic/uart_runner.sv
+diff --git a/synth/yosys_generic/uart_runner.sv b/synth/yosys_generic/uart_runner.sv
+new file mode 100644
+index 0000000..c0c4ef5
+--- /dev/null
++++ b/synth/yosys_generic/uart_runner.sv
+@@ -0,0 +1,49 @@
++`timescale 1ns / 1ps
++
++module uart_runner;
++    logic clk_i;
++    logic rst_ni;
++    logic rx_i;
++    logic tx_o;
++
++    initial begin
++        clk_i = 0;
++        forever #15.5 clk_i = ~clk_i;  // 32.256 MHz clock
++    end
++
++    uart_sim #() dut (.*);
++
++    task automatic reset;
++        rx_i = 1;
++        rst_ni = 0;
++        @(posedge clk_i);
++        rst_ni = 1;
++    endtask
++
++    task automatic send_byte(input logic [7:0] data);
++        integer i;
++
++        rx_i = 0;
++        repeat (280) @(posedge clk_i);
++
++        for (i = 0; i <8; i++) begin
++            rx_i = data[i];
++            repeat (280) @(posedge clk_i);
++        end
++
++        rx_i = 1;
++        repeat (280) @(posedge clk_i);
++    endtask
++
++    task automatic wait_clk(input int units);
++        repeat (units) @(posedge clk_i);
++    endtask
++endmodule
++
++
++
++
++
++
++
++
+diff --git a/synth/yosys_generic/blinky_sim.sv b/synth/yosys_generic/uart_sim.sv
+similarity index 89%
+rename from synth/yosys_generic/blinky_sim.sv
+rename to synth/yosys_generic/uart_sim.sv
+index 51b1efb..84a328f 100644
+--- a/synth/yosys_generic/blinky_sim.sv
++++ b/synth/yosys_generic/uart_sim.sv
+@@ -1,5 +1,5 @@
+ 
+-module blinky_sim (
++module uart_sim(
+     
+     input  logic clk_i,
+     input  logic rst_ni,
+diff --git a/synth/yosys_generic/yosys.tcl b/synth/yosys_generic/yosys.tcl
+index a2bbeaf..aa63547 100644
+--- a/synth/yosys_generic/yosys.tcl
++++ b/synth/yosys_generic/yosys.tcl
+@@ -2,7 +2,7 @@
+ yosys -import
+ 
+ read_verilog synth/build/rtl.sv2v.v
+-read_verilog -sv synth/yosys_generic/blinky_sim.sv
++read_verilog -sv synth/yosys_generic/uart_sim.sv
+ 
+ prep
+ opt -full

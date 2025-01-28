@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module uart_echo_tb;
+module blinky_runner;
     logic clk_i;
     logic rst_ni;
     logic rx_i;

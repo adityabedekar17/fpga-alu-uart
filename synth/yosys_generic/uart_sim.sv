@@ -1,5 +1,5 @@
 
-module blinky_sim (
+module uart_sim(
     
     input  logic clk_i,
     input  logic rst_ni,
