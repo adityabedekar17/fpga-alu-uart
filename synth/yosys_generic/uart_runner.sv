@@ -16,7 +16,7 @@ module uart_runner;
     task automatic reset;
         rx_i = 1;
         rst_ni = 0;
-        @(posedge clk_i);
+        repeat (5) @(posedge clk_i);
         rst_ni = 1;
     endtask
 
