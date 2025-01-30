@@ -40,6 +40,32 @@ module uart_runner;
     task automatic wait_clk(input int units);
         repeat (units) @(posedge clk_i);
     endtask
+
+    logic [7:0] tx_byte, tx_data;
+    integer tx_bit_count = 0;
+    logic tx_valid, tx_ready;
+    task automatic  receive_byte;
+    while (tx_o ==0) @(posedge clk_i);
+    
+     //always @(negedge tx_o) begin
+        if (tx_bit_count == 0 && tx_o == 0) begin
+            tx_bit_count <= 1;
+        end else if (tx_bit_count <= 8) begin
+            tx_byte[tx_bit_count-1] <= tx_o;
+            tx_bit_count <= tx_bit_count + 1;
+        end else if (tx_o ==1) begin
+            $display("TX byte received: %h", tx_byte);
+            tx_bit_count <= 0;
+        end
+    
+
+    while(tx_valid && tx_ready==0) @(posedge clk_i); 
+        
+            $display("Echoed byte: %h", tx_data);
+       
+    
+    endtask
+
 endmodule
 
 

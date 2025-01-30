@@ -2,7 +2,8 @@
 module icebreaker (
     input  wire CLK,
     input  wire  RX,
-    output wire  TX
+    output wire  TX,
+    input wire BTN_N
 );
 
 wire clk_12 = CLK;
@@ -40,7 +41,7 @@ top #(
     .BaudRate(115200)
 ) top (
     .clk_i (clk_32_256),
-    .rst_ni(1'b1),
+    .rst_ni(BTN_N),
     .rx_i(RX),
     .tx_o(TX)
 );
