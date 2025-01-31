@@ -26,7 +26,7 @@ module top #(
 );
 
     // Prescale from third party Ip
-    localparam logic [15:0] uart_prescale = 16'(ClkFreq / BaudRate); 
+    localparam logic [15:0] uart_prescale = 16'(ClkFreq / (BaudRate*8)); 
 
     logic [7:0] axis_data;  
     logic       axis_valid;  

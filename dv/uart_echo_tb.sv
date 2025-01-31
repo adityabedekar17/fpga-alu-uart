@@ -16,11 +16,12 @@ module uart_echo_tb;
 
         // send 'A' (0x41)
         $display("Sending A...");
-        uart_runner.send_byte(8'h41);
-        
-       uart_runner.receive_byte();
        
-        uart_runner.wait_clk(80000);
+        uart_runner.send_byte(8'h41);
+         
+        uart_runner.receive_byte();
+       
+        //uart_runner.wait_clk(80000);
         $display("Done");
         $finish;
     end

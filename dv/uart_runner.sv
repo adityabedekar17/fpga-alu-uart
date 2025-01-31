@@ -23,12 +23,12 @@ module uart_runner;
     endtask
 
     task automatic send_byte(input logic [7:0] data);
-        integer i;
+        
 
         rx_i = 0;
         repeat (280) @(posedge clk_i);
 
-        for (i = 0; i <8; i++) begin
+        for (int i = 0; i <8; i++) begin
             rx_i = data[i];
             repeat (280) @(posedge clk_i);
         end
@@ -41,29 +41,30 @@ module uart_runner;
         repeat (units) @(posedge clk_i);
     endtask
 
-    logic [7:0] tx_byte, tx_data;
+    logic [7:0] tx_byte, rx_data;
     integer tx_bit_count = 0;
     logic tx_valid, tx_ready;
-    task automatic  receive_byte;
-    while (tx_o ==0) @(posedge clk_i);
+   
+    task automatic receive_byte;
+    $display("start byte");
+      //wait for start
+     //while(tx_o ==1)
+      //@(negedge tx_o);
+      repeat(280) @(posedge clk_i);
     
-     //always @(negedge tx_o) begin
-        if (tx_bit_count == 0 && tx_o == 0) begin
-            tx_bit_count <= 1;
-        end else if (tx_bit_count <= 8) begin
-            tx_byte[tx_bit_count-1] <= tx_o;
-            tx_bit_count <= tx_bit_count + 1;
-        end else if (tx_o ==1) begin
-            $display("TX byte received: %h", tx_byte);
-            tx_bit_count <= 0;
+    //receive 8 bits
+    for (int i = 0; i <8; i++) begin
+        repeat (280) @(posedge clk_i);
+        rx_data[i] = tx_o;
         end
-    
+    //wait for end  bit
+     repeat(280) @(posedge clk_i);
+       if (tx_o !=1) begin
+         $display("Error: invalid stop bit ");
+       end
 
-    while(tx_valid && tx_ready==0) @(posedge clk_i); 
-        
-            $display("Echoed byte: %h", tx_data);
+       $display("Received:%h",rx_data);
        
-    
     endtask
 
 endmodule
