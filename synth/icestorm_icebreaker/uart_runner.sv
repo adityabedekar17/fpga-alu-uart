@@ -42,37 +42,37 @@ module uart_runner;
         end
 
         rx_i = 1;
-        repeat (280) @(posedge clk_i);
     endtask
 
     task automatic wait_clk(input int units);
         repeat (units) @(posedge clk_i);
     endtask
-   logic [7:0] tx_byte, rx_data;
-   
-   
+
+    parameter Prescale = (32250000 / (115200 * 8));
+    localparam ByteCycles = Prescale * 8;
+
+    logic [7:0] tx_byte;
     task automatic receive_byte;
-    logic [7:0] temp_data;
-    $display("Waiting for start bit..");
-      //wait for start
-       while(tx_o ==1)
-         @(posedge clk_i);
-      repeat(140) @(posedge clk_i);
-      repeat(280) @(posedge clk_i);
-    //receive 8 bits
-    for (int i = 0; i <8; i++) begin
-        rx_data[i] = tx_o;
-        repeat (280) @(posedge clk_i);
+        $display("Waiting for start bit..");
+        tx_byte = '0;
+        //wait for start
+        while (tx_o == 1'b1) @(posedge clk_i);
+        repeat (ByteCycles / 2) @(posedge clk_i);
+        repeat (ByteCycles) @(posedge clk_i);
+
+        //receive 8 bits
+        for (int i = 0; i < 8; i++) begin
+            tx_byte[i] = tx_o;
+            repeat (ByteCycles) @(posedge clk_i);
         end
-         
-    //wait for stop  bit
-    repeat (140) @(posedge clk_i);
-       if (tx_o !=1) begin
-         $display("Error: invalid stop bit ");
-       end
-        
-       $display("Received:%h",rx_data);
-       
+
+        //wait for stop  bit
+        repeat (ByteCycles) @(posedge clk_i);
+        if (tx_o != 1) begin
+            $display("Error: invalid stop bit ");
+        end
+
+        $display("Received: %h",tx_byte);
     endtask
 
 endmodule
