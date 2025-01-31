@@ -52,6 +52,12 @@ synth/icestorm_icebreaker/build/icebreaker.asc: synth/icestorm_icebreaker/build/
 	 --pcf synth/icestorm_icebreaker/nextpnr.pcf \
 	 --asc $@
 
+synth/icestorm_icebreaker/build/icebreaker.bit: synth/icestorm_icebreaker/build/icebreaker.asc
+	icepack $< $@
+
+program: synth/icestorm_icebreaker/build/icebreaker.bit
+	icesprog $<
+
 %.bit: %.asc
 	icepack $< $@
 
