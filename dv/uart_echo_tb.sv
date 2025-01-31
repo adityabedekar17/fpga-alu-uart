@@ -9,20 +9,14 @@ module uart_echo_tb;
 
     uart_runner uart_runner (); 
 
-    logic [7:0] sample_byte = 8'h41;
     initial begin
         uart_runner.reset();
-
-        uart_runner.wait_clk(1000);
-
-        // send 'A' (0x41)
-        $display("Sending '%c' (%h)...", sample_byte, sample_byte);
        
-        uart_runner.send_byte(8'h41);
-         
-        uart_runner.receive_byte();
-       
-        //uart_runner.wait_clk(80000);
+        repeat (10) begin
+            uart_runner.send_msg();
+            uart_runner.receive_msg();
+        end
+
         $display("Done");
         $finish;
     end

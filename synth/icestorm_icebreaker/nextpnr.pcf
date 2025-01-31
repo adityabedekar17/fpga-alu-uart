@@ -4,6 +4,6 @@
 set_io -nowarn CLK        35
 
 # LEDs and Button
-set_io -nowarn RX         6# FTDI RX
-set_io -nowarn TX         9# FTDI TX
+set_io -nowarn RX         4# FTDI RX
+set_io -nowarn TX         6# FTDI TX
 set_io -nowarn BTN_N      10#reset

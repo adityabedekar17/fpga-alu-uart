@@ -1,5 +1,9 @@
 dv/dv_pkg.sv
 dv/uart_echo_tb.sv
+
+third_party/alexforencich_uart/rtl/uart_rx.v
+third_party/alexforencich_uart/rtl/uart_tx.v
+
 --timing
 -j 0
 -Wall
@@ -13,3 +17,5 @@ dv/uart_echo_tb.sv
 -Werror-IMPLICIT
 -Werror-USERERROR
 -Werror-LATCH
+
+

@@ -8,9 +8,10 @@ module uart_sim(
 );
 
   
-uart_echo #(
-    .DATA_WIDTH(8)
-)  dut (.*);
+top #(
+    .ClkFreq(32250000),
+    .BaudRate(115200)
+) dut (.*);
 
 endmodule
 
