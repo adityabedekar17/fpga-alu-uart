@@ -23,8 +23,11 @@ module uart_runner;
     task automatic reset;
         rx_i = 1;
         rst_ni = 0;
+        btn_n =0; //press reset
         repeat (5) @(posedge clk_i);
         rst_ni = 1;
+        btn_n=1; //release reset
+        repeat (5) @(posedge clk_i);// wait after reset
     endtask
 
     task automatic send_byte(input logic [7:0] data);
@@ -46,27 +49,28 @@ module uart_runner;
         repeat (units) @(posedge clk_i);
     endtask
    logic [7:0] tx_byte, rx_data;
-    integer tx_bit_count = 0;
-    logic tx_valid, tx_ready;
+   
    
     task automatic receive_byte;
-    $display("start byte");
+    logic [7:0] temp_data;
+    $display("Waiting for start bit..");
       //wait for start
-       // while(tx_o ==1)
-        // @(negedge tx_o);
+       while(tx_o ==1)
+         @(posedge clk_i);
+      repeat(140) @(posedge clk_i);
       repeat(280) @(posedge clk_i);
-    
     //receive 8 bits
     for (int i = 0; i <8; i++) begin
-        repeat (280) @(posedge clk_i);
         rx_data[i] = tx_o;
+        repeat (280) @(posedge clk_i);
         end
-    //wait for end  bit
-     repeat(280) @(posedge clk_i);
+         
+    //wait for stop  bit
+    repeat (140) @(posedge clk_i);
        if (tx_o !=1) begin
          $display("Error: invalid stop bit ");
        end
-
+        
        $display("Received:%h",rx_data);
        
     endtask
